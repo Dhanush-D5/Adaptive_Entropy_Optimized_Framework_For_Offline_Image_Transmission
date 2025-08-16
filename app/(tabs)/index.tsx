@@ -5,7 +5,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
-import { useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
 
 export default function Base64ImageConverterScreen() {
@@ -19,22 +19,27 @@ export default function Base64ImageConverterScreen() {
   const [imageSavedInfo, setImageSavedInfo] = useState('');
 
   // For web file input
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Upload image & encode to base64
   const pickImage = async () => {
     setImageUri('');
     setEncodedBase64('');
+
     let result = await ImagePicker.launchImageLibraryAsync({
       base64: true,
       quality: 1,
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
     });
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
+    if (
+      !result.canceled &&
+      result.assets &&
+      result.assets.length > 0
+    ) {
       const asset = result.assets[0];
-      setImageUri(asset.uri || '');
-      setEncodedBase64(asset.base64 || '');
+      setImageUri(asset.uri ?? '');
+      setEncodedBase64(asset.base64 ?? '');
     }
   };
 
@@ -51,14 +56,14 @@ export default function Base64ImageConverterScreen() {
     if (!encodedBase64 || !imageUri) return;
     if (Platform.OS === 'web') {
       const blob = new Blob([encodedBase64], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'image.base64.txt';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(url);
       alert('Base64 downloaded!');
     } else {
       const fileUri = FileSystem.cacheDirectory + 'image.base64.txt';
@@ -76,32 +81,38 @@ export default function Base64ImageConverterScreen() {
     try {
       if (Platform.OS === 'web') {
         if (fileInputRef.current) {
-          fileInputRef.current.value = null;
+          fileInputRef.current.value = '';
           fileInputRef.current.click();
         }
       } else {
-        const res = await DocumentPicker.getDocumentAsync({ type: ['text/plain', 'application/octet-stream'] });
-        if (res.type === 'success') {
-          const fileContent = await FileSystem.readAsStringAsync(res.uri);
+        const res = await DocumentPicker.getDocumentAsync({
+          type: ['text/plain', 'application/octet-stream'],
+        });
+        if (!res.canceled && res.assets && res.assets.length > 0) {
+          const asset = res.assets[0];
+          const fileContent = await FileSystem.readAsStringAsync(asset.uri);
           setBase64Text(fileContent.replace(/[\r\n\s]+/g, ''));
         }
       }
-    } catch (err) {
+    } catch {
       setError('Could not load file.');
     }
   };
 
   // Web: Handler for file input change
-  const onWebBase64File = (event) => {
+  const onWebBase64File = (event: React.ChangeEvent<HTMLInputElement>) => {
     setError('');
     setDecodedUri('');
     setImageSavedInfo('');
-    const file = event.target.files[0];
+    const file = event.target?.files && event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function(e) {
-      const raw = (e.target.result || '').replace(/[\r\n\s]+/g, '');
-      setBase64Text(raw);
+      const result = e.target?.result;
+      if (typeof result === 'string') {
+        const raw = result.replace(/[\r\n\s]+/g, '');
+        setBase64Text(raw);
+      }
     };
     reader.onerror = () => setError('Failed to read file.');
     reader.readAsText(file);
@@ -133,23 +144,23 @@ export default function Base64ImageConverterScreen() {
     if (Platform.OS === 'web') {
       try {
         // Create Blob and trigger download
-        const byteCharacters = atob(base64Text);
+        const byteCharacters = window.atob(base64Text);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
           byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: 'image/png' });
-        const url = URL.createObjectURL(blob);
+        const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = 'decoded-image.png';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(url);
         setImageSavedInfo('Image downloaded!');
-      } catch (e) {
+      } catch {
         setImageSavedInfo('Failed to download image.');
       }
     } else {
@@ -158,7 +169,7 @@ export default function Base64ImageConverterScreen() {
         const imgUri = FileSystem.cacheDirectory + 'decoded-image.png';
         await FileSystem.writeAsStringAsync(imgUri, base64Text, { encoding: FileSystem.EncodingType.Base64 });
         setImageSavedInfo('Image saved to: ' + imgUri);
-      } catch (e) {
+      } catch {
         setImageSavedInfo('Failed to save image.');
       }
     }
@@ -172,9 +183,9 @@ export default function Base64ImageConverterScreen() {
           source={require('@/assets/images/partial-react-logo.png')}
           style={styles.reactLogo}
         />
-      }>
+      }
+    >
       <ThemedView style={styles.container}>
-
         {/* SECTION 1: IMAGE TO BASE64 */}
         <ThemedText type="title">Image to Base64</ThemedText>
         <ThemedView style={styles.sectionWhite}>
@@ -204,7 +215,6 @@ export default function Base64ImageConverterScreen() {
             </>
           ) : null}
         </ThemedView>
-
         {/* SECTION 2: BASE64 TO IMAGE */}
         <ThemedText type="title">Base64 to Image</ThemedText>
         <ThemedView style={styles.sectionWhite}>
@@ -252,12 +262,12 @@ export default function Base64ImageConverterScreen() {
             </>
           ) : null}
         </ThemedView>
-
       </ThemedView>
     </ParallaxScrollView>
   );
 }
 
+// StyleSheet
 const styles = StyleSheet.create({
   container: {
     padding: 16,
