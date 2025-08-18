@@ -5,9 +5,18 @@ import * as Clipboard from 'expo-clipboard';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';   // ✅ import router
+import {
+  Dimensions,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+} from 'react-native';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -19,11 +28,10 @@ export default function Base64ImageConverterScreen() {
   const [error, setError] = useState('');
   const [imageSavedInfo, setImageSavedInfo] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();   // ✅ initialize router
+  const router = useRouter();
 
   const logout = () => {
-    // Navigate back to login page
-    router.replace('/');   // ✅ replace ensures no "back" to this screen
+    router.replace('/');
   };
 
   const pickImage = async () => {
@@ -157,7 +165,9 @@ export default function Base64ImageConverterScreen() {
     } else {
       try {
         const imgUri = FileSystem.cacheDirectory + 'decoded-image.png';
-        await FileSystem.writeAsStringAsync(imgUri, base64Text, { encoding: FileSystem.EncodingType.Base64 });
+        await FileSystem.writeAsStringAsync(imgUri, base64Text, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
         setImageSavedInfo('Image saved to: ' + imgUri);
       } catch {
         setImageSavedInfo('Failed to save image.');
@@ -167,28 +177,24 @@ export default function Base64ImageConverterScreen() {
 
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#000', dark: '#000' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-          resizeMode="cover"
-        />
-      }
+      headerBackgroundColor={{ light: '#232336', dark: '#232336' }}
+      headerImage={<></>}
     >
       {/* ✅ Logout button */}
-      <TouchableOpacity style={[styles.button, { backgroundColor: '#DC2626' }]} onPress={logout}>
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: '#232336' }]}
+        onPress={logout}
+      >
         <Text style={styles.buttonText}>Logout</Text>
       </TouchableOpacity>
 
       <ThemedView style={styles.container}>
         {/* SECTION 1: IMAGE TO BASE64 */}
         <ThemedText type="title" style={styles.title}>Image to Base64</ThemedText>
-        <ThemedView style={styles.sectionBlack}>
+        <ThemedView style={styles.section}>
           <TouchableOpacity style={styles.button} onPress={pickImage}>
             <Text style={styles.buttonText}>Upload Image</Text>
           </TouchableOpacity>
-          {imageUri ? <Image source={{ uri: imageUri }} style={styles.image} resizeMode="contain" /> : null}
           {encodedBase64 ? (
             <>
               <ScrollView style={styles.scrollView}>
@@ -198,7 +204,7 @@ export default function Base64ImageConverterScreen() {
                   multiline
                   numberOfLines={6}
                   style={styles.textInput}
-                  placeholderTextColor="#888"
+                  placeholderTextColor="#aaa"
                 />
               </ScrollView>
               <TouchableOpacity style={styles.button} onPress={copyBase64}>
@@ -213,7 +219,7 @@ export default function Base64ImageConverterScreen() {
 
         {/* SECTION 2: BASE64 TO IMAGE */}
         <ThemedText type="title" style={styles.title}>Base64 to Image</ThemedText>
-        <ThemedView style={styles.sectionBlack}>
+        <ThemedView style={styles.section}>
           {Platform.OS === 'web' && (
             <input
               ref={fileInputRef}
@@ -231,104 +237,118 @@ export default function Base64ImageConverterScreen() {
             style={styles.textInput}
             value={base64Text}
             onChangeText={setBase64Text}
-            placeholder="Paste raw Base64 string (no data:image/... headers)"
-            placeholderTextColor="#888"
+            placeholder="Paste raw Base64 string (no headers)"
+            placeholderTextColor="#fff"
             multiline
             numberOfLines={6}
           />
           <TouchableOpacity style={styles.button} onPress={decodeBase64}>
             <Text style={styles.buttonText}>Convert to Image</Text>
           </TouchableOpacity>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          {/* ✅ Show decoded image */}
           {decodedUri ? (
             <>
-              <Image source={{ uri: decodedUri }} style={styles.image} resizeMode="contain" />
+              <Image
+                source={{ uri: decodedUri }}
+                style={{
+                  width: SCREEN_WIDTH * 0.8,
+                  height: SCREEN_WIDTH * 0.8,
+                  alignSelf: 'center',
+                  borderRadius: 10,
+                  marginTop: 10,
+                }}
+                resizeMode="contain"
+              />
               <TouchableOpacity style={styles.button} onPress={downloadImage}>
                 <Text style={styles.buttonText}>Download Image</Text>
               </TouchableOpacity>
-              {imageSavedInfo ? <Text style={styles.savedInfo}>{imageSavedInfo}</Text> : null}
             </>
           ) : null}
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {imageSavedInfo ? <Text style={styles.savedInfo}>{imageSavedInfo}</Text> : null}
         </ThemedView>
       </ThemedView>
     </ParallaxScrollView>
   );
-}
-
-const styles = StyleSheet.create({
+}const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    backgroundColor: '#000',
     flex: 1,
+    backgroundColor: '#0D001A', // deep dark background
+    padding: 20,
   },
-  sectionBlack: {
-    marginBottom: 24,
+  section: {
+    backgroundColor: '#1E1E2E', // dark card style
     padding: 16,
-    backgroundColor: '#111',
-    borderRadius: 8,
-    boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+    borderRadius: 12,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
   },
   title: {
+    fontSize: 18,
+    fontWeight: '700',
     color: '#fff',
+    textAlign: 'center',
+    marginBottom: 12,
   },
   subText: {
-    color: '#ccc',
-    marginBottom: 6,
+    fontSize: 14,
+    color: '#bbb',
+    textAlign: 'center',
+    marginBottom: 10,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#222',
-    borderRadius: 6,
-    padding: 8,
-    minHeight: 56,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: 14,
+    borderColor: '#8E44FF', // purple border
+    borderRadius: 10,
+    padding: 12,
+    minHeight: 50,
+    fontSize: 15,
     color: '#fff',
-    backgroundColor: '#222',
-    marginBottom: 8,
+    backgroundColor: '#0D001A', // match dark background
+    marginBottom: 14,
+    textAlignVertical: 'top',
   },
   button: {
-    backgroundColor: '#4F46E5',
-    padding: 12,
-    borderRadius: 6,
+    backgroundColor: '#8E44FF', // purple button
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: 'center',
-    marginVertical: 4,
+    marginTop: 8,
+    shadowColor: '#8E44FF',
+    shadowOpacity: 0.5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
   },
   buttonText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '700',
+    fontSize: 16,
   },
   savedInfo: {
-    color: '#22c55e',
-    fontWeight: 'bold',
+    color: '#4ade80',
+    fontWeight: '600',
+    textAlign: 'center',
     marginTop: 8,
   },
-  image: {
-    width: '100%',
-    height: 220,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#333',
-    alignSelf: 'center',
-    marginBottom: 8,
-    backgroundColor: '#000',
-  },
   error: {
-    color: '#F43F5E',
-    fontWeight: 'bold',
-    marginTop: 6,
+    color: '#f87171',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 8,
   },
   scrollView: {
     maxHeight: 200,
-    minHeight: 56,
-    backgroundColor: '#222',
-    borderRadius: 6,
-    marginVertical: 4,
-  },
-  reactLogo: {
-    width: SCREEN_WIDTH,
-    height: 180,
-    alignSelf: 'center',
-    backgroundColor: '#000',
+    minHeight: 60,
+    backgroundColor: '#0D001A',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#8E44FF',
+    marginTop: 10,
+    padding: 8,
   },
 });
