@@ -34,20 +34,20 @@ export default function Base64ImageConverterScreen() {
     router.replace('/');
   };
 
-  const pickImage = async () => {
-    setImageUri('');
-    setEncodedBase64('');
-    let result = await ImagePicker.launchImageLibraryAsync({
-      base64: true,
-      quality: 1,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    });
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      setImageUri(asset.uri ?? '');
-      setEncodedBase64(asset.base64 ?? '');
-    }
-  };
+const pickImage = async () => {
+  setImageUri('');
+  setEncodedBase64('');
+  let result = await ImagePicker.launchImageLibraryAsync({
+    base64: true,
+    quality: 1,
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,// Reverted to supported enum
+  });
+  if (!result.canceled && result.assets && result.assets.length > 0) {
+    const asset = result.assets[0];
+    setImageUri(asset.uri ?? '');
+    setEncodedBase64(asset.base64 ?? '');
+  }
+};
 
   const copyBase64 = async () => {
     if (encodedBase64) {
