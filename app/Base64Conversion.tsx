@@ -15,8 +15,14 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
+  TouchableOpacity
 } from 'react-native';
+
+// ✅ Install expo-linear-gradient before running: expo install expo-linear-gradient
+
+import Logo from '../assets/images/Logo.png';
+ // path must exactly match file location and name
+ // Adjust this path to your logo
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -34,20 +40,20 @@ export default function Base64ImageConverterScreen() {
     router.replace('/');
   };
 
-const pickImage = async () => {
-  setImageUri('');
-  setEncodedBase64('');
-  let result = await ImagePicker.launchImageLibraryAsync({
-    base64: true,
-    quality: 1,
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,// Reverted to supported enum
-  });
-  if (!result.canceled && result.assets && result.assets.length > 0) {
-    const asset = result.assets[0];
-    setImageUri(asset.uri ?? '');
-    setEncodedBase64(asset.base64 ?? '');
-  }
-};
+  const pickImage = async () => {
+    setImageUri('');
+    setEncodedBase64('');
+    let result = await ImagePicker.launchImageLibraryAsync({
+      base64: true,
+      quality: 1,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      setImageUri(asset.uri ?? '');
+      setEncodedBase64(asset.base64 ?? '');
+    }
+  };
 
   const copyBase64 = async () => {
     if (encodedBase64) {
@@ -176,115 +182,128 @@ const pickImage = async () => {
   };
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#232336', dark: '#232336' }}
-      headerImage={<></>}
-    >
-      {/* ✅ Logout button */}
-      <TouchableOpacity
-        style={[styles.button, { backgroundColor: '#232336' }]}
-        onPress={logout}
+
+      <ParallaxScrollView
       >
-        <Text style={styles.buttonText}>Logout</Text>
-      </TouchableOpacity>
+        {/* Logo at top */}
+        <Image
+          source={Logo}
+          style={{
+            width: 120,
+            height: 120,
+            alignSelf: 'center',
+            marginVertical: 24,
+            borderRadius: 24,
+          }}
+          resizeMode="contain"
+        />
 
-      <ThemedView style={styles.container}>
-        {/* SECTION 1: IMAGE TO BASE64 */}
-        <ThemedText type="title" style={styles.title}>Image to Base64</ThemedText>
-        <ThemedView style={styles.section}>
-          <TouchableOpacity style={styles.button} onPress={pickImage}>
-            <Text style={styles.buttonText}>Upload Image</Text>
-          </TouchableOpacity>
-          {encodedBase64 ? (
-            <>
-              <ScrollView style={styles.scrollView}>
-                <TextInput
-                  value={encodedBase64}
-                  editable={false}
-                  multiline
-                  numberOfLines={6}
-                  style={styles.textInput}
-                  placeholderTextColor="#aaa"
-                />
-              </ScrollView>
-              <TouchableOpacity style={styles.button} onPress={copyBase64}>
-                <Text style={styles.buttonText}>Copy Base64</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={downloadBase64}>
-                <Text style={styles.buttonText}>Download Base64 File</Text>
-              </TouchableOpacity>
-            </>
-          ) : null}
-        </ThemedView>
+        {/* ✅ Logout button */}
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: '#b31b1bff' }]}
+          onPress={logout}
+        >
+          <Text style={styles.buttonText}>Logout</Text>
+        </TouchableOpacity>
 
-        {/* SECTION 2: BASE64 TO IMAGE */}
-        <ThemedText type="title" style={styles.title}>Base64 to Image</ThemedText>
-        <ThemedView style={styles.section}>
-          {Platform.OS === 'web' && (
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".txt,.bytes,.base64"
-              style={{ display: 'none' }}
-              onChange={onWebBase64File}
-            />
-          )}
-          <TouchableOpacity style={styles.button} onPress={pickBase64File}>
-            <Text style={styles.buttonText}>Upload .txt/.bytes/.base64 File</Text>
-          </TouchableOpacity>
-          <ThemedText style={styles.subText}>Or paste Base64 below:</ThemedText>
-          <TextInput
-            style={styles.textInput}
-            value={base64Text}
-            onChangeText={setBase64Text}
-            placeholder="Paste raw Base64 string (no headers)"
-            placeholderTextColor="#fff"
-            multiline
-            numberOfLines={6}
-          />
-          <TouchableOpacity style={styles.button} onPress={decodeBase64}>
-            <Text style={styles.buttonText}>Convert to Image</Text>
-          </TouchableOpacity>
+        <ThemedView style={styles.container}>
+          {/* SECTION 1: IMAGE TO BASE64 */}
+          <ThemedText type="title" style={styles.title}>Image to Base64</ThemedText>
+          <ThemedView style={styles.section}>
+            <TouchableOpacity style={styles.button} onPress={pickImage}>
+              <Text style={styles.buttonText}>Upload Image</Text>
+            </TouchableOpacity>
+            {encodedBase64 ? (
+              <>
+                <ScrollView style={styles.scrollView}>
+                  <TextInput
+                    value={encodedBase64}
+                    editable={false}
+                    multiline
+                    numberOfLines={6}
+                    style={styles.textInput}
+                    placeholderTextColor="#aaa"
+                  />
+                </ScrollView>
+                <TouchableOpacity style={styles.button} onPress={copyBase64}>
+                  <Text style={styles.buttonText}>Copy Base64</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={downloadBase64}>
+                  <Text style={styles.buttonText}>Download Base64 File</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </ThemedView>
 
-          {/* ✅ Show decoded image */}
-          {decodedUri ? (
-            <>
-              <Image
-                source={{ uri: decodedUri }}
-                style={{
-                  width: SCREEN_WIDTH * 0.8,
-                  height: SCREEN_WIDTH * 0.8,
-                  alignSelf: 'center',
-                  borderRadius: 10,
-                  marginTop: 10,
-                }}
-                resizeMode="contain"
+          {/* SECTION 2: BASE64 TO IMAGE */}
+          <ThemedText type="title" style={styles.title}>Base64 to Image</ThemedText>
+          <ThemedView style={styles.section}>
+            {Platform.OS === 'web' && (
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.bytes,.base64"
+                style={{ display: 'none' }}
+                onChange={onWebBase64File}
               />
-              <TouchableOpacity style={styles.button} onPress={downloadImage}>
-                <Text style={styles.buttonText}>Download Image</Text>
-              </TouchableOpacity>
-            </>
-          ) : null}
+            )}
+            <TouchableOpacity style={styles.button} onPress={pickBase64File}>
+              <Text style={styles.buttonText}>Upload .txt/.bytes/.base64 File</Text>
+            </TouchableOpacity>
+            <ThemedText style={styles.subText}>Or paste Base64 below:</ThemedText>
+            <TextInput
+              style={styles.textInput}
+              value={base64Text}
+              onChangeText={setBase64Text}
+              placeholder="Paste raw Base64 string (no headers)"
+              placeholderTextColor="#fff"
+              multiline
+              numberOfLines={6}
+            />
+            <TouchableOpacity style={styles.button} onPress={decodeBase64}>
+              <Text style={styles.buttonText}>Convert to Image</Text>
+            </TouchableOpacity>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          {imageSavedInfo ? <Text style={styles.savedInfo}>{imageSavedInfo}</Text> : null}
+            {/* ✅ Show decoded image */}
+            {decodedUri ? (
+              <>
+                <Image
+                  source={{ uri: decodedUri }}
+                  style={{
+                    width: SCREEN_WIDTH * 0.8,
+                    height: SCREEN_WIDTH * 0.8,
+                    alignSelf: 'center',
+                    borderRadius: 10,
+                    marginTop: 10,
+                  }}
+                  resizeMode="contain"
+                />
+                <TouchableOpacity style={styles.button} onPress={downloadImage}>
+                  <Text style={styles.buttonText}>Download Image</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+            {imageSavedInfo ? <Text style={styles.savedInfo}>{imageSavedInfo}</Text> : null}
+          </ThemedView>
         </ThemedView>
-      </ThemedView>
-    </ParallaxScrollView>
+      </ParallaxScrollView>
   );
-}const styles = StyleSheet.create({
+}
+
+const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0D001A', // deep dark background
     padding: 20,
   },
   section: {
-    backgroundColor: '#1E1E2E', // dark card style
+    backgroundColor: 'rgba(22,1,37,0.9)', // translucent dark card over gradient
     padding: 16,
     borderRadius: 12,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
+    shadowColor: '#6C1BB3',
+    shadowOpacity: 0.4,
     shadowOffset: { width: 0, height: 3 },
     shadowRadius: 6,
   },
@@ -303,23 +322,22 @@ const pickImage = async () => {
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#8E44FF', // purple border
+    borderColor: '#6C1BB3',
     borderRadius: 10,
     padding: 12,
     minHeight: 50,
     fontSize: 15,
     color: '#fff',
-    backgroundColor: '#0D001A', // match dark background
     marginBottom: 14,
     textAlignVertical: 'top',
   },
   button: {
-    backgroundColor: '#8E44FF', // purple button
+    backgroundColor: '#6C1BB3',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 8,
-    shadowColor: '#8E44FF',
+    shadowColor: '#6C1BB3',
     shadowOpacity: 0.5,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
@@ -344,10 +362,9 @@ const pickImage = async () => {
   scrollView: {
     maxHeight: 200,
     minHeight: 60,
-    backgroundColor: '#0D001A',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#8E44FF',
+    borderColor: '#6C1BB3',
     marginTop: 10,
     padding: 8,
   },
