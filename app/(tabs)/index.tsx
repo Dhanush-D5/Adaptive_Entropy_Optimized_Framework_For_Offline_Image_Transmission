@@ -9,7 +9,7 @@ export default function PhoneLoginScreen() {
 
   const handleNext = () => {
     if (/^\d{10}$/.test(phone)) {
-      router.replace("/Base64Conversion"); 
+      router.replace("/FetchContacts"); 
     } else {
       Alert.alert("Invalid Phone Number", "Phone number must be exactly 10 digits.");
     }
