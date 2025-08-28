@@ -32,36 +32,37 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: 40,
     paddingHorizontal: 20,
-    backgroundColor: "#121212",
+    backgroundColor: "#140028", // deep purple background
     alignItems: "center",
   },
   title: {
     fontSize: 28,
-    color: "#FFD700", // gold color
+    color: "#6a0dad", // vibrant purple
     fontWeight: "700",
     marginBottom: 30,
+    textAlign: "center",
   },
   ownerCard: {
-    backgroundColor: "#1E1E1E",
-    borderRadius: 10,
+    backgroundColor: "#1e1e2f", // dark card
+    borderRadius: 14,
     padding: 20,
     marginBottom: 20,
     width: "100%",
-    shadowColor: "#FFD700",
+    shadowColor: "#6a0dad", // subtle purple shadow
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.7,
+    shadowOpacity: 0.3,
     shadowRadius: 6,
-    elevation: 10,
+    elevation: 8,
   },
   ownerName: {
     fontSize: 22,
-    color: "#FFD700",
+    color: "#6a0dad", // vibrant purple
     fontWeight: "700",
     marginBottom: 8,
   },
   ownerInfo: {
     fontSize: 16,
-    color: "#CCCCCC",
+    color: "#d1c4e9", // muted purple-grey
     lineHeight: 22,
   },
 });
