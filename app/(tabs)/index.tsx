@@ -1,7 +1,20 @@
 // app/PhoneLoginScreen.tsx
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Platform,
+} from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { Dimensions } from "react-native";
+
+const { width, height } = Dimensions.get("window");
 
 export default function PhoneLoginScreen() {
   const [phone, setPhone] = useState("");
@@ -9,14 +22,20 @@ export default function PhoneLoginScreen() {
 
   const handleNext = () => {
     if (/^\d{10}$/.test(phone)) {
-      router.replace("/FetchContacts"); 
+      router.replace("/FetchContacts");
     } else {
       Alert.alert("Invalid Phone Number", "Phone number must be exactly 10 digits.");
     }
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAwareScrollView
+      contentContainerStyle={styles.container}
+      enableOnAndroid={true}
+      extraScrollHeight={Platform.OS === "ios" ? 100 : 120}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       {/* Logo on top */}
       <Image
         source={require("@/assets/images/1.png")}
@@ -31,7 +50,7 @@ export default function PhoneLoginScreen() {
           style={styles.input}
           keyboardType="number-pad"
           maxLength={10}
-          placeholder="1234567890"
+          placeholder="XXXXXXXXXX"
           placeholderTextColor="#aaa"
           value={phone}
           onChangeText={setPhone}
@@ -40,21 +59,21 @@ export default function PhoneLoginScreen() {
           <Text style={styles.buttonText}>Next</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: "#140028", // extracted deep purple background
+    flexGrow: 1,
+    backgroundColor: "#140028",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
   logo: {
-    width: 500,  // increased size for visibility
-    height: 500,
+    width: width * 0.8,  // 80% of screen width
+    height: height * 0.3, // 30% of screen height
     marginBottom: 30,
     shadowColor: "#000",
     shadowOpacity: 0.3,
@@ -62,7 +81,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
   card: {
-    backgroundColor: "#1e1e2f", // dark but softer than bg
+    backgroundColor: "#1e1e2f",
     width: "100%",
     borderRadius: 20,
     padding: 24,
@@ -81,7 +100,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: "#6a0dad", // lighter purple for contrast
+    borderColor: "#6a0dad",
     borderRadius: 14,
     padding: 14,
     marginBottom: 20,
@@ -90,7 +109,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#2a2a3d",
   },
   button: {
-    backgroundColor: "#6a0dad", // purple button
+    backgroundColor: "#6a0dad",
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: "center",
