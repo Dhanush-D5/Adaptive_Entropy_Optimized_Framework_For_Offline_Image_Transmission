@@ -56,7 +56,7 @@ export default function PhoneLoginScreen() {
           onChangeText={setPhone}
         />
         <TouchableOpacity style={styles.button} onPress={handleNext}>
-          <Text style={styles.buttonText}>Next</Text>
+          <Text style={styles.buttonText}>Login</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAwareScrollView>

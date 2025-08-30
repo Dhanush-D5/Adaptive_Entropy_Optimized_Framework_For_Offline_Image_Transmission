@@ -30,7 +30,6 @@ export default function Base64ImageConverterScreen() {
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const asset = result.assets[0];
-
       const manipulated = await ImageManipulator.manipulateAsync(
         asset.uri,
         [{ resize: { width: 800 } }],
@@ -66,8 +65,14 @@ export default function Base64ImageConverterScreen() {
       <View style={styles.card}>
         <Text style={styles.title}>{name ?? "Unknown"}</Text>
 
-        <TouchableOpacity style={styles.button} onPress={pickImage}>
-          <Text style={styles.buttonText}>Upload & Compress Image</Text>
+        {/* Upload & Compress Image button replaced by up.png image */}
+        <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
+<Image
+  source={require("../assets/images/up.png")}
+  style={styles.buttonImage}
+  resizeMode="contain"
+/>
+<Text style={styles.imageButtonText}>Upload</Text>
         </TouchableOpacity>
 
         {imageUri && (
@@ -120,8 +125,17 @@ export default function Base64ImageConverterScreen() {
           style={styles.input}
         />
 
-        <TouchableOpacity style={[styles.button, { marginTop: 15 }]} onPress={reconstructImage}>
-          <Text style={styles.buttonText}>Reconstruct Image</Text>
+        {/* Reconstruct Image button replaced by down.png image */}
+        <TouchableOpacity
+          style={[styles.imageButton, { marginTop: 15 }]}
+          onPress={reconstructImage}
+        >
+<Image
+  source={require("../assets/images/down.png")}
+  style={styles.buttonImage}
+  resizeMode="contain"
+/>
+<Text style={styles.imageButtonText}>Download</Text>
         </TouchableOpacity>
 
         {reconstructedUri && (
@@ -140,17 +154,16 @@ export default function Base64ImageConverterScreen() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#140028", // deep purple background
+    backgroundColor: "#140028",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
   card: {
-    backgroundColor: "#1e1e2f", // dark but softer than bg
+    backgroundColor: "#1e1e2f",
     width: "100%",
     borderRadius: 20,
     padding: 24,
@@ -189,8 +202,23 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 28,
     fontWeight: "bold",
     letterSpacing: 1,
   },
+  imageButton: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buttonImage: {
+    width: 120,
+    height:120,
+  },
+imageButtonText: {
+  color: "#fff",
+  marginTop: 6,
+  fontSize: 36,   // increased from 14 to 20
+  fontWeight: "600",
+},
+
 });

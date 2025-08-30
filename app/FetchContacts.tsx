@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -6,14 +6,18 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
+  ScrollView,
 } from "react-native";
 import * as Contacts from "expo-contacts";
 import { useRouter } from "expo-router";
+
+const ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 export default function FetchContacts() {
   const [contacts, setContacts] = useState<Contacts.Contact[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const router = useRouter();
+  const flatListRef = useRef<FlatList<Contacts.Contact>>(null);
 
   const loadContacts = async () => {
     const { status } = await Contacts.requestPermissionsAsync();
@@ -24,6 +28,10 @@ export default function FetchContacts() {
 
       const filtered = data.filter(
         (c) => c.phoneNumbers && c.phoneNumbers.some((p) => p.number)
+      );
+      // Sort contacts alphabetically by name
+      filtered.sort((a, b) =>
+        (a.name ?? "").localeCompare(b.name ?? "", undefined, { sensitivity: "base" })
       );
       setContacts(filtered);
     } else {
@@ -39,14 +47,23 @@ export default function FetchContacts() {
     c.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // 🔹 Logout redirects to Home (index.tsx)
+  const scrollToLetter = (letter: string) => {
+    if (!flatListRef.current) return;
+    const index = filteredContacts.findIndex((contact) =>
+      contact.name?.toUpperCase().startsWith(letter)
+    );
+    if (index !== -1) {
+      flatListRef.current.scrollToIndex({ index, animated: true, viewPosition: 0 });
+    }
+  };
+
   const handleLogout = () => {
     router.replace("/");
   };
 
   return (
     <View style={styles.container}>
-      {/* 🔹 Logout Button in Center */}
+      {/* Logout Button */}
       <View style={styles.topSection}>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Logout</Text>
@@ -64,48 +81,72 @@ export default function FetchContacts() {
         onChangeText={setSearchQuery}
       />
 
-      <FlatList
-        data={filteredContacts}
-        keyExtractor={(item) => item.id ?? Math.random().toString()}
-        renderItem={({ item }) => {
-          const uniqueNumbers = [
+      <View style={{ flexDirection: "row", flex: 1 }}>
+        <FlatList
+          ref={flatListRef}
+          data={filteredContacts}
+          keyExtractor={(item) => item.id ?? Math.random().toString()}
+          renderItem={({ item }) => {
+            const uniqueNumbers = [
               ...new Set(
-              item.phoneNumbers
-              ?.map((p) => p.number)
-              .filter((num): num is string => Boolean(num))
-              .map((num) => num.replace(/\D/g, "")) // keep only digits
-        ),
-      ];
+                item.phoneNumbers
+                  ?.map((p) => p.number)
+                  .filter((num): num is string => Boolean(num))
+                  .map((num) => num.replace(/\D/g, "")) // keep only digits
+              ),
+            ];
 
+            return (
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: "/Base64Conversion",
+                    params: {
+                      contactId: item.id ?? "",
+                      name: item.name ?? "Unnamed",
+                      numbers: JSON.stringify(uniqueNumbers),
+                    },
+                  })
+                }
+              >
+                <View style={styles.contactCard}>
+                  <Text style={styles.contactName}>{item.name}</Text>
+                  {uniqueNumbers.map((num, i) => (
+                    <Text key={i} style={styles.phone}>
+                      {num}
+                    </Text>
+                  ))}
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+          initialNumToRender={15}
+          maxToRenderPerBatch={20}
+          windowSize={10}
+          style={{ flex: 1 }}
+          getItemLayout={(_, index) => ({
+            length: 100,
+            offset: 100 * index,
+            index,
+          })}
+        />
 
-          return (
-            <TouchableOpacity
-              onPress={() =>
-                router.push({
-                  pathname: "/Base64Conversion",
-                  params: {
-                    contactId: item.id ?? "",
-                    name: item.name ?? "Unnamed",
-                    numbers: JSON.stringify(uniqueNumbers),
-                  },
-                })
-              }
-            >
-              <View style={styles.contactCard}>
-                <Text style={styles.contactName}>{item.name}</Text>
-                {uniqueNumbers.map((num, i) => (
-                  <Text key={i} style={styles.phone}>
-                    {num}
-                  </Text>
-                ))}
-              </View>
-            </TouchableOpacity>
-          );
-        }}
-        initialNumToRender={15}
-        maxToRenderPerBatch={20}
-        windowSize={10}
-      />
+        {/* Alphabet Sidebar with ScrollView */}
+        <View style={styles.alphabetContainer}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {ALPHABETS.map((letter) => (
+              <TouchableOpacity
+                key={letter}
+                onPress={() => scrollToLetter(letter)}
+                activeOpacity={0.6}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.letter}>{letter}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
     </View>
   );
 }
@@ -122,15 +163,23 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   logoutButton: {
-    backgroundColor: "#e53935",
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+    backgroundColor: "#6a0dad",
+    paddingVertical: 14,
+    paddingHorizontal: 160,
+    borderRadius: 14,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 5,
   },
   logoutText: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "bold",
+    letterSpacing: 1,
+    textAlign: "center",
   },
   title: {
     fontSize: 36,
@@ -141,6 +190,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     backgroundColor: "#1e1e2f",
+    width: "100%",
     color: "#fff",
     borderRadius: 14,
     padding: 12,
@@ -151,8 +201,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#1e1e2f",
     width: "100%",
     borderRadius: 20,
-    padding: 20,
-    marginVertical: 8,
+    padding: 15,
+    marginVertical: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
@@ -169,5 +219,23 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#d1c4e9",
     marginTop: 3,
+  },
+  alphabetContainer: {
+    width: 50,
+    justifyContent: "flex-start",
+    alignItems: "center",
+    marginLeft: 10,
+    backgroundColor: "#000000",
+    borderRadius: 14,
+    paddingVertical: 10,
+    height: 590,  // Fixed height for scroll view effect
+  },
+  letter: {
+    fontSize: 18,
+    color: "#6a0dad",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    fontWeight: "700",
+    userSelect: "none",
   },
 });
