@@ -100,7 +100,7 @@ export default function FetchContacts() {
               <TouchableOpacity
                 onPress={() =>
                   router.push({
-                    pathname: "/Base64Conversion",
+                    pathname: "/ImageTransmissionScreen",
                     params: {
                       contactId: item.id ?? "",
                       name: item.name ?? "Unnamed",
