@@ -1,15 +1,15 @@
-import React, { useEffect, useState, useRef } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-} from "react-native";
 import * as Contacts from "expo-contacts";
 import { useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -29,7 +29,6 @@ export default function FetchContacts() {
       const filtered = data.filter(
         (c) => c.phoneNumbers && c.phoneNumbers.some((p) => p.number)
       );
-      // Sort contacts alphabetically by name
       filtered.sort((a, b) =>
         (a.name ?? "").localeCompare(b.name ?? "", undefined, { sensitivity: "base" })
       );
@@ -92,7 +91,7 @@ export default function FetchContacts() {
                 item.phoneNumbers
                   ?.map((p) => p.number)
                   .filter((num): num is string => Boolean(num))
-                  .map((num) => num.replace(/\D/g, "")) // keep only digits
+                  .map((num) => num.replace(/\D/g, ""))
               ),
             ];
 
@@ -103,7 +102,7 @@ export default function FetchContacts() {
                     pathname: "/ImageTransmissionScreen",
                     params: {
                       contactId: item.id ?? "",
-                      name: item.name ?? "Unnamed",
+                      contactName: item.name ?? "Unnamed", // pass name param here
                       numbers: JSON.stringify(uniqueNumbers),
                     },
                   })
@@ -228,7 +227,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#000000",
     borderRadius: 14,
     paddingVertical: 10,
-    height: 590,  // Fixed height for scroll view effect
+    height: 590,
   },
   letter: {
     fontSize: 18,
