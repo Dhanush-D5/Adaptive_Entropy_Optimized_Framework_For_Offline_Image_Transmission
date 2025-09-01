@@ -104,3 +104,4 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: "#fff", fontWeight: "bold" },
 });
+git checkout main
