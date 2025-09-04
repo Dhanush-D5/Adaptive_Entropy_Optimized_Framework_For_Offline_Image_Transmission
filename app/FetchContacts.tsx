@@ -1,15 +1,16 @@
-import React, { useEffect, useState, useRef } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-} from "react-native";
 import * as Contacts from "expo-contacts";
 import { useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  FlatList,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -70,7 +71,14 @@ export default function FetchContacts() {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.title}>Contacts</Text>
+      {/* Large Title Image above Text */}
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('../assets/images/contact-icon.jpg')} // Replace with your actual image path
+          style={styles.largeLogoImage}
+        />
+        <Text style={styles.titleLarge}>Contacts</Text>
+      </View>
 
       {/* Search Bar */}
       <TextInput
@@ -181,12 +189,19 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textAlign: "center",
   },
-  title: {
-    fontSize: 36,
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  largeLogoImage: {
+    width: 100,        // Large size width
+    height: 100,       // Large size height
+    marginBottom: 0,
+  },
+  titleLarge: {
+    fontSize: 20,
     fontWeight: "700",
     color: "#fff",
-    marginBottom: 15,
-    textAlign: "center",
   },
   searchInput: {
     backgroundColor: "#1e1e2f",
@@ -228,7 +243,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#000000",
     borderRadius: 14,
     paddingVertical: 10,
-    height: 590,  // Fixed height for scroll view effect
+    height: 590,
   },
   letter: {
     fontSize: 18,
