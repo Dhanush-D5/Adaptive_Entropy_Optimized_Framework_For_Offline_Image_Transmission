@@ -49,21 +49,52 @@ export default function ImageChatScreen() {
     getEncryptionKey();
   }, []);
 
+  const addMessage = (msg: Partial<ChatMessage>) => {
+    setMessages((prev) => {
+      const updated = [
+        ...prev,
+        {
+          id: Date.now().toString() + Math.random(),
+          type: msg.type!,
+          text: msg.text,
+          image: msg.image,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ];
+      // Scroll to bottom shortly after message added
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      return updated;
+    });
+  };
+
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ base64: false, quality: 1 });
-    if (!result.canceled && result.assets.length > 0) {
-      const uri = result.assets[0].uri;
-      addMessage({ type: "sent", text: "Processing image..." });
-      await processImage(uri);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        base64: false,
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        const uri = result.assets[0].uri;
+        addMessage({ type: "sent", text: "Processing image..." });
+        await processImage(uri);
+      }
+    } catch (error) {
+      addMessage({ type: "sent", text: "Image picking failed." });
+      console.error(error);
     }
   };
 
   const processImage = async (uri: string) => {
     const compressed = await compressToTargetSize(uri, TARGET_BYTES);
-    if (!compressed) return;
+    if (!compressed) {
+      addMessage({ type: "sent", text: "Failed to compress image." });
+      return;
+    }
+
     addMessage({
       type: "sent",
-      text: `Base64 string ready. Size: ${compressed.base64.length} characters`,
+      text: `Base64 string ready. Size: ${compressed.base64.length} characters.`,
     });
 
     const { chunks } = await createSmsChunks(compressed.base64, CHUNK_SIZE);
@@ -86,23 +117,6 @@ export default function ImageChatScreen() {
     if (path) {
       addMessage({ type: "received", image: path });
     }
-  };
-
-  const addMessage = (msg: Partial<ChatMessage>) => {
-    setMessages((prev) => {
-      const updated = [
-        ...prev,
-        {
-          id: Date.now().toString() + Math.random(),
-          type: msg.type!,
-          text: msg.text,
-          image: msg.image,
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ];
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
-      return updated;
-    });
   };
 
   const onSend = () => {
@@ -131,20 +145,18 @@ export default function ImageChatScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Back to contacts">
             <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
-          <Image
-            source={require("../assets/images/1.jpg")}
-            style={styles.headerAvatar}
-          />
-          <Text numberOfLines={1} style={styles.headerName}>
+          <Image source={require("../assets/images/1.jpg")} style={styles.headerAvatar} accessibilityIgnoresInvertColors accessibilityLabel="Contact Avatar"/>
+          <Text numberOfLines={1} style={styles.headerName} accessibilityRole="header" accessibilityLabel={`Chat with ${contactName}`}>
             {contactName}
           </Text>
         </View>
+
         <View style={styles.divider} />
 
-        {/* Messages */}
+        {/* Messages List */}
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -155,11 +167,13 @@ export default function ImageChatScreen() {
               style={[
                 styles.messageContainer,
                 item.type === "sent" ? styles.sentBubble : styles.receivedBubble,
-                item.image ? { padding: 6 } : {}, // Less padding if image
+                item.image ? { padding: 6 } : {},
               ]}
+              accessible
+              accessibilityLabel={item.image ? "Image message" : `Text message: ${item.text}`}
             >
               {item.image && (
-                <TouchableOpacity onPress={() => handleImagePress(item.image, item.type)}>
+                <TouchableOpacity onPress={() => handleImagePress(item.image, item.type)} accessibilityRole="imagebutton" accessibilityLabel="Tap to enlarge image">
                   <Image source={{ uri: item.image }} style={styles.image} />
                 </TouchableOpacity>
               )}
@@ -167,9 +181,11 @@ export default function ImageChatScreen() {
               <Text style={styles.chatTime}>{item.time}</Text>
             </View>
           )}
+          keyboardShouldPersistTaps="handled"
+          inverted={false}
         />
 
-        {/* Input section */}
+        {/* Input area */}
         <View style={[styles.inputSection, { paddingBottom: insets.bottom ? insets.bottom : 12 }]}>
           <TextInput
             style={styles.chatInput}
@@ -177,31 +193,32 @@ export default function ImageChatScreen() {
             onChangeText={setInput}
             placeholder={`Message ${contactName}`}
             placeholderTextColor="#bbb"
-            multiline={true}
+            multiline
             maxLength={1000}
+            accessibilityLabel="Chat message input"
           />
-          <TouchableOpacity style={styles.iconButton} onPress={pickImage}>
+          <TouchableOpacity style={styles.iconButton} onPress={pickImage} accessibilityLabel="Attach image" accessibilityRole="button">
             <Text style={styles.icon}>📎</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.sendButton} onPress={onSend}>
+          <TouchableOpacity style={styles.sendButton} onPress={onSend} accessibilityLabel="Send message" accessibilityRole="button">
             <Text style={styles.sendIcon}>➤</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Modal for image enlarge */}
+        {/* Image modal */}
         <Modal
           visible={modalVisible}
           transparent
           animationType="fade"
           onRequestClose={() => setModalVisible(false)}
+          accessible
+          accessibilityViewIsModal={true}
         >
           <View style={styles.modalOverlay}>
-            <TouchableOpacity style={styles.modalClose} onPress={() => setModalVisible(false)}>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setModalVisible(false)} accessibilityLabel="Close image preview" accessibilityRole="button">
               <Text style={{ color: "#fff", fontSize: 28 }}>✖</Text>
             </TouchableOpacity>
-            {modalImage && (
-              <Image source={{ uri: modalImage }} style={styles.largeImage} resizeMode="contain" />
-            )}
+            {modalImage && <Image source={{ uri: modalImage }} style={styles.largeImage} resizeMode="contain" />}
           </View>
         </Modal>
       </KeyboardAvoidingView>
@@ -216,6 +233,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 14,
     paddingBottom: 12,
+    backgroundColor: "#140028",
   },
   backButton: {
     marginRight: 12,
@@ -318,6 +336,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     marginLeft: 8,
+    backgroundColor: "#6a0dad",
+    justifyContent: "center",
+    alignItems: "center",
   },
   sendIcon: {
     color: "#fff",
@@ -330,6 +351,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.9)",
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 20,
   },
   modalClose: {
     position: "absolute",
@@ -338,7 +360,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   largeImage: {
-    width: "90%",
+    width: "100%",
     height: "70%",
     borderRadius: 20,
     backgroundColor: "#fff",

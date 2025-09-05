@@ -1,17 +1,20 @@
+import * as Clipboard from "expo-clipboard";
+import * as ImageManipulator from "expo-image-manipulator";
+import * as ImagePicker from "expo-image-picker";
+import { useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
+  Alert,
   Image,
-  TextInput,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import * as ImageManipulator from "expo-image-manipulator";
-import * as Clipboard from "expo-clipboard";
-import { useLocalSearchParams } from "expo-router";
 
 export default function Base64ImageConverterScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -21,89 +24,90 @@ export default function Base64ImageConverterScreen() {
 
   const { name } = useLocalSearchParams();
 
+  // Pick image from library, compress and convert to base64
   const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-      base64: false,
-    });
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+        base64: false,
+      });
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      const manipulated = await ImageManipulator.manipulateAsync(
-        asset.uri,
-        [{ resize: { width: 800 } }],
-        {
-          compress: 0.5,
-          format: ImageManipulator.SaveFormat.JPEG,
-          base64: true,
-        }
-      );
-
-      setImageUri(manipulated.uri);
-      setEncodedBase64(manipulated.base64 ?? "");
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const manipulated = await ImageManipulator.manipulateAsync(
+          asset.uri,
+          [{ resize: { width: 800 } }],
+          {
+            compress: 0.5,
+            format: ImageManipulator.SaveFormat.JPEG,
+            base64: true,
+          }
+        );
+        setImageUri(manipulated.uri);
+        setEncodedBase64(manipulated.base64 ?? "");
+        setReconstructedUri(null);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Something went wrong while picking the image.");
+      console.error(error);
     }
   };
 
+  // Copy encoded base64 string to clipboard
   const copyBase64 = async () => {
     if (encodedBase64) {
       await Clipboard.setStringAsync(encodedBase64);
-      alert("Compressed string copied to clipboard!");
+      Alert.alert("Copied!", "Compressed Base64 string copied to clipboard.");
     }
   };
 
+  // Reconstruct image from pasted base64 string
   const reconstructImage = () => {
     if (pastedBase64.trim().length > 0) {
       setReconstructedUri("data:image/jpeg;base64," + pastedBase64.trim());
     } else {
-      alert("Please paste a valid Base64 string.");
+      Alert.alert("Invalid Input", "Please paste a valid Base64 string.");
     }
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <View style={styles.card}>
-        <Text style={styles.title}>{name ?? "Unknown"}</Text>
+        <Text style={styles.title}>{name ?? "Base64 Image Converter"}</Text>
 
-        {/* Upload & Compress Image button replaced by up.png image */}
+        {/* Upload & Compress Image */}
         <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
-<Image
-  source={require("../assets/images/up.png")}
-  style={styles.buttonImage}
-  resizeMode="contain"
-/>
-<Text style={styles.imageButtonText}>Upload</Text>
+          <Image
+            source={require("../assets/images/up.png")}
+            style={styles.buttonImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.imageButtonText}>Upload</Text>
         </TouchableOpacity>
 
+        {/* Show compressed image */}
         {imageUri && (
           <Image
             source={{ uri: imageUri }}
-            style={{ width: 220, height: 220, marginVertical: 20, borderRadius: 12 }}
+            style={styles.previewImage}
             resizeMode="contain"
           />
         )}
 
+        {/* Show encoded Base64 string */}
         {encodedBase64 ? (
           <>
-            <Text style={[styles.title, { fontSize: 16, marginBottom: 10 }]}>
-              Base64 length: {encodedBase64.length}
-            </Text>
-            <ScrollView
-              style={{
-                maxHeight: 150,
-                width: "100%",
-                borderWidth: 1,
-                borderColor: "#6a0dad",
-                borderRadius: 12,
-                backgroundColor: "#2a2a3d",
-                marginBottom: 15,
-              }}
-            >
+            <Text style={styles.infoText}>Base64 length: {encodedBase64.length}</Text>
+            <ScrollView style={styles.base64Container}>
               <TextInput
                 value={encodedBase64}
                 editable={false}
                 multiline
-                style={[styles.input, { borderWidth: 0 }]}
+                style={[styles.input, styles.base64Input]}
               />
             </ScrollView>
 
@@ -113,7 +117,8 @@ export default function Base64ImageConverterScreen() {
           </>
         ) : null}
 
-        <Text style={[styles.title, { fontSize: 16, marginTop: 20 }]}>
+        {/* Paste Base64 input */}
+        <Text style={[styles.title, { fontSize: 18, marginTop: 24 }]}>
           Paste Compressed String Below:
         </Text>
         <TextInput
@@ -125,35 +130,37 @@ export default function Base64ImageConverterScreen() {
           style={styles.input}
         />
 
-        {/* Reconstruct Image button replaced by down.png image */}
+        {/* Reconstruct Image */}
         <TouchableOpacity
-          style={[styles.imageButton, { marginTop: 15 }]}
+          style={[styles.imageButton, { marginTop: 16 }]}
           onPress={reconstructImage}
         >
-<Image
-  source={require("../assets/images/down.png")}
-  style={styles.buttonImage}
-  resizeMode="contain"
-/>
-<Text style={styles.imageButtonText}>Download</Text>
+          <Image
+            source={require("../assets/images/down.png")}
+            style={styles.buttonImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.imageButtonText}>Download</Text>
         </TouchableOpacity>
 
+        {/* Show reconstructed image */}
         {reconstructedUri && (
           <>
-            <Text style={[styles.title, { fontSize: 16, marginTop: 20 }]}>
+            <Text style={[styles.title, { fontSize: 18, marginTop: 24 }]}>
               Reconstructed Image:
             </Text>
             <Image
               source={{ uri: reconstructedUri }}
-              style={{ width: 220, height: 220, marginTop: 15, borderRadius: 12 }}
+              style={styles.previewImage}
               resizeMode="contain"
             />
           </>
         )}
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -172,6 +179,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    alignItems: "center",
   },
   title: {
     fontSize: 22,
@@ -189,6 +197,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#fff",
     backgroundColor: "#2a2a3d",
+    width: "100%",
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
+  base64Container: {
+    maxHeight: 150,
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#6a0dad",
+    borderRadius: 12,
+    backgroundColor: "#2a2a3d",
+    marginBottom: 15,
+  },
+  base64Input: {
+    borderWidth: 0,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   button: {
     backgroundColor: "#6a0dad",
@@ -202,7 +227,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#fff",
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: "bold",
     letterSpacing: 1,
   },
@@ -212,13 +237,23 @@ const styles = StyleSheet.create({
   },
   buttonImage: {
     width: 120,
-    height:120,
+    height: 120,
   },
-imageButtonText: {
-  color: "#fff",
-  marginTop: 6,
-  fontSize: 36,   // increased from 14 to 20
-  fontWeight: "600",
-},
-
+  imageButtonText: {
+    color: "#fff",
+    marginTop: 6,
+    fontSize: 20,
+    fontWeight: "600",
+  },
+  infoText: {
+    fontSize: 16,
+    color: "#d1c4e9",
+    marginBottom: 10,
+  },
+  previewImage: {
+    width: 220,
+    height: 220,
+    marginVertical: 20,
+    borderRadius: 12,
+  },
 });

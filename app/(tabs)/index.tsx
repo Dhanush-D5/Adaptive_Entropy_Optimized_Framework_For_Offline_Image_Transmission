@@ -3,16 +3,16 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Dimensions,
   Image,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-  Platform,
+  View
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import { Dimensions } from "react-native";
 
 const { width, height } = Dimensions.get("window");
 
@@ -20,8 +20,10 @@ export default function PhoneLoginScreen() {
   const [phone, setPhone] = useState("");
   const router = useRouter();
 
+  const isValidPhone = /^\d{10}$/.test(phone);
+
   const handleNext = () => {
-    if (/^\d{10}$/.test(phone)) {
+    if (isValidPhone) {
       router.replace("/FetchContacts");
     } else {
       Alert.alert("Invalid Phone Number", "Phone number must be exactly 10 digits.");
@@ -41,6 +43,7 @@ export default function PhoneLoginScreen() {
         source={require("@/assets/images/1.png")}
         style={styles.logo}
         resizeMode="contain"
+        accessibilityLabel="App Logo"
       />
 
       {/* Card */}
@@ -54,8 +57,22 @@ export default function PhoneLoginScreen() {
           placeholderTextColor="#aaa"
           value={phone}
           onChangeText={setPhone}
+          autoFocus={true}
+          returnKeyType="done"
+          onSubmitEditing={handleNext}
+          accessible
+          accessibilityLabel="Phone number input field"
+          importantForAutofill="yes"
         />
-        <TouchableOpacity style={styles.button} onPress={handleNext}>
+        <TouchableOpacity
+          style={[styles.button, !isValidPhone && styles.buttonDisabled]}
+          onPress={handleNext}
+          activeOpacity={0.8}
+          disabled={!isValidPhone}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !isValidPhone }}
+          accessibilityLabel="Login button"
+        >
           <Text style={styles.buttonText}>Login</Text>
         </TouchableOpacity>
       </View>
@@ -72,7 +89,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   logo: {
-    width: width * 0.8,  // 80% of screen width
+    width: width * 0.8, // 80% of screen width
     height: height * 0.3, // 30% of screen height
     marginBottom: 30,
     shadowColor: "#000",
@@ -117,6 +134,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 5,
+  },
+  buttonDisabled: {
+    backgroundColor: "#3e2266",
   },
   buttonText: {
     color: "#fff",

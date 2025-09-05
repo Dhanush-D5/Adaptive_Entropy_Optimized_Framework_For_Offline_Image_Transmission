@@ -4,6 +4,8 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   FlatList,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,13 +32,13 @@ export default function FetchContacts() {
       const filtered = data.filter(
         (c) => c.phoneNumbers && c.phoneNumbers.some((p) => p.number)
       );
-      // Sort contacts alphabetically by name
+
       filtered.sort((a, b) =>
         (a.name ?? "").localeCompare(b.name ?? "", undefined, { sensitivity: "base" })
       );
       setContacts(filtered);
     } else {
-      alert("Permission denied.");
+      alert("Permission denied. Please enable contacts permission.");
     }
   };
 
@@ -50,8 +52,8 @@ export default function FetchContacts() {
 
   const scrollToLetter = (letter: string) => {
     if (!flatListRef.current) return;
-    const index = filteredContacts.findIndex((contact) =>
-      contact.name?.toUpperCase().startsWith(letter)
+    const index = filteredContacts.findIndex(
+      (contact) => contact.name?.toUpperCase().startsWith(letter)
     );
     if (index !== -1) {
       flatListRef.current.scrollToIndex({ index, animated: true, viewPosition: 0 });
@@ -62,20 +64,70 @@ export default function FetchContacts() {
     router.replace("/");
   };
 
+  const renderContact = ({ item }: { item: Contacts.Contact }) => {
+    const uniqueNumbers = [
+      ...new Set(
+        item.phoneNumbers
+          ?.map((p) => p.number)
+          .filter((num): num is string => Boolean(num))
+          .map((num) => num.replace(/\D/g, "")) // digits only
+      ),
+    ];
+
+    return (
+      <TouchableOpacity
+        onPress={() =>
+          router.push({
+            pathname: "/ImageTransmissionScreen",
+            params: {
+              contactId: item.id ?? "",
+              name: item.name ?? "Unnamed",
+              numbers: JSON.stringify(uniqueNumbers),
+            },
+          })
+        }
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`Open contact ${item.name}`}
+      >
+        <View style={styles.contactCard}>
+          <Text style={styles.contactName}>{item.name}</Text>
+          {uniqueNumbers.map((num, i) => (
+            <Text key={i} style={styles.phone}>
+              {num}
+            </Text>
+          ))}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.select({ ios: 100, android: 80 })}
+    >
       {/* Logout Button */}
       <View style={styles.topSection}>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          accessibilityRole="button"
+          accessibilityLabel="Logout"
+        >
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Large Title Image above Text */}
+      {/* Title with Icon */}
       <View style={styles.logoContainer}>
         <Image
-          source={require('../assets/images/contact-icon.jpg')} // Replace with your actual image path
+          source={require("../assets/images/icons_155043.png")}
           style={styles.largeLogoImage}
+          accessibilityIgnoresInvertColors={true}
+          accessible
+          accessibilityLabel="Contacts icon"
         />
         <Text style={styles.titleLarge}>Contacts</Text>
       </View>
@@ -87,59 +139,31 @@ export default function FetchContacts() {
         style={styles.searchInput}
         value={searchQuery}
         onChangeText={setSearchQuery}
+        accessibilityLabel="Search contacts"
+        accessibilityHint="Filter contacts by name"
+        clearButtonMode="while-editing"
       />
 
-      <View style={{ flexDirection: "row", flex: 1 }}>
+      <View style={styles.listAndSidebar}>
         <FlatList
           ref={flatListRef}
           data={filteredContacts}
           keyExtractor={(item) => item.id ?? Math.random().toString()}
-          renderItem={({ item }) => {
-            const uniqueNumbers = [
-              ...new Set(
-                item.phoneNumbers
-                  ?.map((p) => p.number)
-                  .filter((num): num is string => Boolean(num))
-                  .map((num) => num.replace(/\D/g, "")) // keep only digits
-              ),
-            ];
-
-            return (
-              <TouchableOpacity
-                onPress={() =>
-                  router.push({
-                    pathname: "/ImageTransmissionScreen",
-                    params: {
-                      contactId: item.id ?? "",
-                      name: item.name ?? "Unnamed",
-                      numbers: JSON.stringify(uniqueNumbers),
-                    },
-                  })
-                }
-              >
-                <View style={styles.contactCard}>
-                  <Text style={styles.contactName}>{item.name}</Text>
-                  {uniqueNumbers.map((num, i) => (
-                    <Text key={i} style={styles.phone}>
-                      {num}
-                    </Text>
-                  ))}
-                </View>
-              </TouchableOpacity>
-            );
-          }}
+          renderItem={renderContact}
           initialNumToRender={15}
           maxToRenderPerBatch={20}
           windowSize={10}
+          contentContainerStyle={{ paddingBottom: 20 }}
           style={{ flex: 1 }}
           getItemLayout={(_, index) => ({
-            length: 100,
-            offset: 100 * index,
+            length: 90,
+            offset: 90 * index,
             index,
           })}
+          keyboardShouldPersistTaps="handled"
         />
 
-        {/* Alphabet Sidebar with ScrollView */}
+        {/* Alphabet Sidebar */}
         <View style={styles.alphabetContainer}>
           <ScrollView showsVerticalScrollIndicator={false}>
             {ALPHABETS.map((letter) => (
@@ -148,6 +172,8 @@ export default function FetchContacts() {
                 onPress={() => scrollToLetter(letter)}
                 activeOpacity={0.6}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Scroll to contacts starting with letter ${letter}`}
               >
                 <Text style={styles.letter}>{letter}</Text>
               </TouchableOpacity>
@@ -155,7 +181,7 @@ export default function FetchContacts() {
           </ScrollView>
         </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -163,7 +189,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#140028",
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   topSection: {
     alignItems: "center",
@@ -173,7 +200,7 @@ const styles = StyleSheet.create({
   logoutButton: {
     backgroundColor: "#6a0dad",
     paddingVertical: 14,
-    paddingHorizontal: 160,
+    paddingHorizontal: 80,
     borderRadius: 14,
     alignItems: "center",
     shadowColor: "#000",
@@ -184,22 +211,22 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
     letterSpacing: 1,
     textAlign: "center",
   },
   logoContainer: {
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 12,
   },
   largeLogoImage: {
-    width: 100,        // Large size width
-    height: 100,       // Large size height
-    marginBottom: 0,
+    width: 100,
+    height: 100,
+    marginBottom: 8,
   },
   titleLarge: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "700",
     color: "#fff",
   },
@@ -208,9 +235,13 @@ const styles = StyleSheet.create({
     width: "100%",
     color: "#fff",
     borderRadius: 14,
-    padding: 12,
+    padding: 14,
     marginBottom: 15,
     fontSize: 18,
+  },
+  listAndSidebar: {
+    flexDirection: "row",
+    flex: 1,
   },
   contactCard: {
     backgroundColor: "#1e1e2f",
@@ -225,13 +256,13 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   contactName: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "700",
     color: "#6a0dad",
-    marginBottom: 10,
+    marginBottom: 6,
   },
   phone: {
-    fontSize: 18,
+    fontSize: 16,
     color: "#d1c4e9",
     marginTop: 3,
   },
@@ -243,12 +274,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#000000",
     borderRadius: 14,
     paddingVertical: 10,
-    height: 590,
+    height: "100%",
   },
   letter: {
     fontSize: 18,
     color: "#6a0dad",
-    paddingVertical: 4,
+    paddingVertical: 6,
     paddingHorizontal: 8,
     fontWeight: "700",
     userSelect: "none",
