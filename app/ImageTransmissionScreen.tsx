@@ -30,8 +30,8 @@ interface ChatMessage {
   time?: string;
 }
 
-const TARGET_BYTES = 5500;
-const CHUNK_SIZE = 90;
+const TARGET_BYTES = 5500;   // ~5.5 KB target after compression (tune for your SMS budget)
+const CHUNK_SIZE = 90;       // characters per SMS chunk payload (post-encryption/encoding)
 
 export default function ImageChatScreen() {
   const router = useRouter();
@@ -46,6 +46,7 @@ export default function ImageChatScreen() {
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
+    // Prepare / derive encryption key once
     getEncryptionKey();
   }, []);
 
@@ -61,17 +62,18 @@ export default function ImageChatScreen() {
           time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ];
-      // Scroll to bottom shortly after message added
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
       return updated;
     });
   };
 
+  /** ---------- Image Selection (Gallery) ---------- **/
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         base64: false,
         quality: 1,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
       });
 
       if (!result.canceled && result.assets.length > 0) {
@@ -85,7 +87,35 @@ export default function ImageChatScreen() {
     }
   };
 
+  /** ---------- Image Capture (Camera) ---------- **/
+  const takePhoto = async () => {
+    try {
+      // Ask permission explicitly (good UX & avoids silent failures)
+      const camPerm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!camPerm.granted) {
+        addMessage({ type: "sent", text: "Camera permission denied." });
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        base64: false,
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        const uri = result.assets[0].uri;
+        addMessage({ type: "sent", text: "Processing captured image..." });
+        await processImage(uri);
+      }
+    } catch (error) {
+      addMessage({ type: "sent", text: "Camera failed." });
+      console.error(error);
+    }
+  };
+
+  /** ---------- Compression → Chunking → Simulated Tx/Rx ---------- **/
   const processImage = async (uri: string) => {
+    // compress to target size and produce base64 for downstream AES+encoding (inside helpers)
     const compressed = await compressToTargetSize(uri, TARGET_BYTES);
     if (!compressed) {
       addMessage({ type: "sent", text: "Failed to compress image." });
@@ -100,6 +130,7 @@ export default function ImageChatScreen() {
     const { chunks } = await createSmsChunks(compressed.base64, CHUNK_SIZE);
     addMessage({ type: "sent", text: `Image split into ${chunks.length} encrypted chunks.` });
 
+    // Simulate sending/receiving each chunk (replace with SMS send/receive on device)
     const tempChunks: string[] = [];
     for (let i = 0; i < chunks.length; i++) {
       const chunkText = `Chunk ${i + 1}/${chunks.length}`;
@@ -112,19 +143,24 @@ export default function ImageChatScreen() {
     await reconstruct(tempChunks);
   };
 
+  /** ---------- Reassembly & Display ---------- **/
   const reconstruct = async (chunks: string[]) => {
     const path = await reconstructFromSmsMessages(chunks);
     if (path) {
       addMessage({ type: "received", image: path });
+    } else {
+      addMessage({ type: "received", text: "Reconstruction failed." });
     }
   };
 
+  /** ---------- Text Chat ---------- **/
   const onSend = () => {
     if (!input.trim()) return;
     addMessage({ type: "sent", text: input.trim() });
     setInput("");
   };
 
+  /** ---------- Nav & Image Modal ---------- **/
   const handleBack = () => {
     router.replace("/FetchContacts");
   };
@@ -145,18 +181,33 @@ export default function ImageChatScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Back to contacts">
+          <TouchableOpacity
+            onPress={handleBack}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="Back to contacts"
+          >
             <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
-          <Image source={require("../assets/images/1.jpg")} style={styles.headerAvatar} accessibilityIgnoresInvertColors accessibilityLabel="Contact Avatar"/>
-          <Text numberOfLines={1} style={styles.headerName} accessibilityRole="header" accessibilityLabel={`Chat with ${contactName}`}>
+          <Image
+            source={require("../assets/images/1.jpg")}
+            style={styles.headerAvatar}
+            accessibilityIgnoresInvertColors
+            accessibilityLabel="Contact Avatar"
+          />
+          <Text
+            numberOfLines={1}
+            style={styles.headerName}
+            accessibilityRole="header"
+            accessibilityLabel={`Chat with ${contactName}`}
+          >
             {contactName}
           </Text>
         </View>
 
         <View style={styles.divider} />
 
-        {/* Messages List */}
+        {/* Messages */}
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -173,7 +224,11 @@ export default function ImageChatScreen() {
               accessibilityLabel={item.image ? "Image message" : `Text message: ${item.text}`}
             >
               {item.image && (
-                <TouchableOpacity onPress={() => handleImagePress(item.image, item.type)} accessibilityRole="imagebutton" accessibilityLabel="Tap to enlarge image">
+                <TouchableOpacity
+                  onPress={() => handleImagePress(item.image, item.type)}
+                  accessibilityRole="imagebutton"
+                  accessibilityLabel="Tap to enlarge image"
+                >
                   <Image source={{ uri: item.image }} style={styles.image} />
                 </TouchableOpacity>
               )}
@@ -197,10 +252,34 @@ export default function ImageChatScreen() {
             maxLength={1000}
             accessibilityLabel="Chat message input"
           />
-          <TouchableOpacity style={styles.iconButton} onPress={pickImage} accessibilityLabel="Attach image" accessibilityRole="button">
+
+          {/* Attach from gallery */}
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={pickImage}
+            accessibilityLabel="Attach image from gallery"
+            accessibilityRole="button"
+          >
             <Text style={styles.icon}>📎</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.sendButton} onPress={onSend} accessibilityLabel="Send message" accessibilityRole="button">
+
+          {/* Capture from camera */}
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={takePhoto}
+            accessibilityLabel="Open camera"
+            accessibilityRole="button"
+          >
+            <Text style={styles.icon}>📷</Text>
+          </TouchableOpacity>
+
+          {/* Send text */}
+          <TouchableOpacity
+            style={styles.sendButton}
+            onPress={onSend}
+            accessibilityLabel="Send message"
+            accessibilityRole="button"
+          >
             <Text style={styles.sendIcon}>➤</Text>
           </TouchableOpacity>
         </View>
@@ -215,7 +294,12 @@ export default function ImageChatScreen() {
           accessibilityViewIsModal={true}
         >
           <View style={styles.modalOverlay}>
-            <TouchableOpacity style={styles.modalClose} onPress={() => setModalVisible(false)} accessibilityLabel="Close image preview" accessibilityRole="button">
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={() => setModalVisible(false)}
+              accessibilityLabel="Close image preview"
+              accessibilityRole="button"
+            >
               <Text style={{ color: "#fff", fontSize: 28 }}>✖</Text>
             </TouchableOpacity>
             {modalImage && <Image source={{ uri: modalImage }} style={styles.largeImage} resizeMode="contain" />}
