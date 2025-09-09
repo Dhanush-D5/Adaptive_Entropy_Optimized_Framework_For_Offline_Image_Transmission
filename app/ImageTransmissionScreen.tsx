@@ -13,13 +13,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"; // Correct hook import
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 import {
   compressToTargetSize,
   createSmsChunks,
   getEncryptionKey,
-  reconstructFromSmsMessages,
+  reconstructFromSmsMessages, // Correct function name consistent with usage
 } from "./ImageHandler";
 
 interface ChatMessage {
@@ -30,8 +31,8 @@ interface ChatMessage {
   time?: string;
 }
 
-const TARGET_BYTES = 5500;   // ~5.5 KB target after compression (tune for your SMS budget)
-const CHUNK_SIZE = 90;       // characters per SMS chunk payload (post-encryption/encoding)
+const TARGET_BYTES = 5500;
+const CHUNK_SIZE = 90;
 
 export default function ImageChatScreen() {
   const router = useRouter();
@@ -44,9 +45,9 @@ export default function ImageChatScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalImage, setModalImage] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
+  const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
-    // Prepare / derive encryption key once
     getEncryptionKey();
   }, []);
 
@@ -67,7 +68,6 @@ export default function ImageChatScreen() {
     });
   };
 
-  /** ---------- Image Selection (Gallery) ---------- **/
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -75,92 +75,96 @@ export default function ImageChatScreen() {
         quality: 1,
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
       });
-
-      if (!result.canceled && result.assets.length > 0) {
+      if (
+        !result.canceled &&
+        result.assets &&
+        result.assets.length > 0 &&
+        typeof result.assets[0].uri === "string"
+      ) {
         const uri = result.assets[0].uri;
         addMessage({ type: "sent", text: "Processing image..." });
         await processImage(uri);
+      } else {
+        addMessage({ type: "sent", text: "Invalid image selection." });
       }
-    } catch (error) {
+    } catch (e) {
       addMessage({ type: "sent", text: "Image picking failed." });
-      console.error(error);
+      console.error(e);
     }
   };
 
-  /** ---------- Image Capture (Camera) ---------- **/
   const takePhoto = async () => {
     try {
-      // Ask permission explicitly (good UX & avoids silent failures)
       const camPerm = await ImagePicker.requestCameraPermissionsAsync();
       if (!camPerm.granted) {
         addMessage({ type: "sent", text: "Camera permission denied." });
         return;
       }
-
       const result = await ImagePicker.launchCameraAsync({
         base64: false,
         quality: 1,
       });
-
-      if (!result.canceled && result.assets.length > 0) {
+      if (
+        !result.canceled &&
+        result.assets &&
+        result.assets.length > 0 &&
+        typeof result.assets[0].uri === "string"
+      ) {
         const uri = result.assets[0].uri;
         addMessage({ type: "sent", text: "Processing captured image..." });
         await processImage(uri);
+      } else {
+        addMessage({ type: "sent", text: "Invalid image capture." });
       }
-    } catch (error) {
+    } catch (e) {
       addMessage({ type: "sent", text: "Camera failed." });
-      console.error(error);
+      console.error(e);
     }
   };
 
-  /** ---------- Compression → Chunking → Simulated Tx/Rx ---------- **/
   const processImage = async (uri: string) => {
-    // compress to target size and produce base64 for downstream AES+encoding (inside helpers)
+    if (typeof uri !== "string" || !uri) {
+      addMessage({ type: "sent", text: "Compression failed: No valid URI." });
+      return;
+    }
     const compressed = await compressToTargetSize(uri, TARGET_BYTES);
     if (!compressed) {
-      addMessage({ type: "sent", text: "Failed to compress image." });
+      addMessage({ type: "sent", text: "Failed image compression." });
       return;
     }
 
-    addMessage({
-      type: "sent",
-      text: `Base64 string ready. Size: ${compressed.base64.length} characters.`,
-    });
+    addMessage({ type: "sent", text: `Ready: size ${compressed.base64.length}` });
 
     const { chunks } = await createSmsChunks(compressed.base64, CHUNK_SIZE);
-    addMessage({ type: "sent", text: `Image split into ${chunks.length} encrypted chunks.` });
+    addMessage({ type: "sent", text: `Split into ${chunks.length} chunks.` });
 
-    // Simulate sending/receiving each chunk (replace with SMS send/receive on device)
     const tempChunks: string[] = [];
     for (let i = 0; i < chunks.length; i++) {
       const chunkText = `Chunk ${i + 1}/${chunks.length}`;
-      addMessage({ type: "sent", text: `Sending encrypted ${chunkText}` });
-      addMessage({ type: "received", text: `Received encrypted ${chunkText}` });
+      addMessage({ type: "sent", text: `Sending ${chunkText}` });
+      addMessage({ type: "received", text: `Received ${chunkText}` });
       tempChunks.push(chunks[i]);
     }
 
-    addMessage({ type: "received", text: "Chunks received. Reconstructing image..." });
+    addMessage({ type: "received", text: "Reconstructing image..." });
     await reconstruct(tempChunks);
   };
 
-  /** ---------- Reassembly & Display ---------- **/
   const reconstruct = async (chunks: string[]) => {
     const path = await reconstructFromSmsMessages(chunks);
     if (path) {
       addMessage({ type: "received", image: path });
     } else {
-      addMessage({ type: "received", text: "Reconstruction failed." });
+      addMessage({ type: "received", text: "Image reconstruction failed." });
     }
   };
 
-  /** ---------- Text Chat ---------- **/
   const onSend = () => {
     if (!input.trim()) return;
     addMessage({ type: "sent", text: input.trim() });
     setInput("");
   };
 
-  /** ---------- Nav & Image Modal ---------- **/
   const handleBack = () => {
     router.replace("/FetchContacts");
   };
@@ -177,32 +181,15 @@ export default function ImageChatScreen() {
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : insets.top}
+        keyboardVerticalOffset={insets.top}
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={handleBack}
-            style={styles.backButton}
-            accessibilityRole="button"
-            accessibilityLabel="Back to contacts"
-          >
+          <TouchableOpacity onPress={handleBack} style={styles.backButton} accessibilityLabel="Back">
             <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
-          <Image
-            source={require("../assets/images/1.jpg")}
-            style={styles.headerAvatar}
-            accessibilityIgnoresInvertColors
-            accessibilityLabel="Contact Avatar"
-          />
-          <Text
-            numberOfLines={1}
-            style={styles.headerName}
-            accessibilityRole="header"
-            accessibilityLabel={`Chat with ${contactName}`}
-          >
-            {contactName}
-          </Text>
+          <Image source={require("../assets/images/1.jpg")} style={styles.headerAvatar} />
+          <Text style={styles.headerName} numberOfLines={1}>{contactName}</Text>
         </View>
 
         <View style={styles.divider} />
@@ -224,11 +211,7 @@ export default function ImageChatScreen() {
               accessibilityLabel={item.image ? "Image message" : `Text message: ${item.text}`}
             >
               {item.image && (
-                <TouchableOpacity
-                  onPress={() => handleImagePress(item.image, item.type)}
-                  accessibilityRole="imagebutton"
-                  accessibilityLabel="Tap to enlarge image"
-                >
+                <TouchableOpacity onPress={() => handleImagePress(item.image, item.type)} accessibilityRole="imagebutton">
                   <Image source={{ uri: item.image }} style={styles.image} />
                 </TouchableOpacity>
               )}
@@ -240,9 +223,10 @@ export default function ImageChatScreen() {
           inverted={false}
         />
 
-        {/* Input area */}
-        <View style={[styles.inputSection, { paddingBottom: insets.bottom ? insets.bottom : 12 }]}>
+        {/* Footer */}
+        <View style={[styles.inputSection, { paddingBottom: insets.bottom ?? 12 }]}>
           <TextInput
+            ref={inputRef}
             style={styles.chatInput}
             value={input}
             onChangeText={setInput}
@@ -250,57 +234,25 @@ export default function ImageChatScreen() {
             placeholderTextColor="#bbb"
             multiline
             maxLength={1000}
-            accessibilityLabel="Chat message input"
+            accessibilityLabel="Chat Text Input"
           />
 
-          {/* Attach from gallery */}
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={pickImage}
-            accessibilityLabel="Attach image from gallery"
-            accessibilityRole="button"
-          >
-            <Text style={styles.icon}>📎</Text>
+          <TouchableOpacity onPress={pickImage} style={styles.iconButton} accessibilityLabel="Attach Image">
+            <MaterialCommunityIcons name="paperclip" size={26} color="#65666a" />
           </TouchableOpacity>
-
-          {/* Capture from camera */}
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={takePhoto}
-            accessibilityLabel="Open camera"
-            accessibilityRole="button"
-          >
-            <Text style={styles.icon}>📷</Text>
+          <TouchableOpacity onPress={takePhoto} style={styles.iconButton} accessibilityLabel="Open Camera">
+            <MaterialCommunityIcons name="camera-outline" size={26} color="#65666a" />
           </TouchableOpacity>
-
-          {/* Send text */}
-          <TouchableOpacity
-            style={styles.sendButton}
-            onPress={onSend}
-            accessibilityLabel="Send message"
-            accessibilityRole="button"
-          >
-            <Text style={styles.sendIcon}>➤</Text>
+          <TouchableOpacity onPress={onSend} style={styles.sendButton} accessibilityLabel="Send Message" disabled={!input.trim()}>
+            <MaterialCommunityIcons name="send" size={27} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        {/* Image modal */}
-        <Modal
-          visible={modalVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setModalVisible(false)}
-          accessible
-          accessibilityViewIsModal={true}
-        >
+        {/* Modal */}
+        <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)} accessible accessibilityViewIsModal={true}>
           <View style={styles.modalOverlay}>
-            <TouchableOpacity
-              style={styles.modalClose}
-              onPress={() => setModalVisible(false)}
-              accessibilityLabel="Close image preview"
-              accessibilityRole="button"
-            >
-              <Text style={{ color: "#fff", fontSize: 28 }}>✖</Text>
+            <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.modalClose} accessibilityLabel="Close Image" accessibilityRole="button">
+              <Text style={{ fontSize: 28, color: "#fff" }}>✖</Text>
             </TouchableOpacity>
             {modalImage && <Image source={{ uri: modalImage }} style={styles.largeImage} resizeMode="contain" />}
           </View>
@@ -386,11 +338,11 @@ const styles = StyleSheet.create({
   },
   inputSection: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    backgroundColor: "#1e1e2f",
-    borderTopColor: "#3a0a59",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    backgroundColor: "#fff",
+    borderTopColor: "#eee",
     borderTopWidth: 1,
     position: "absolute",
     bottom: 0,
@@ -399,36 +351,29 @@ const styles = StyleSheet.create({
   },
   chatInput: {
     flex: 1,
-    backgroundColor: "#2c2c3f",
+    backgroundColor: "#f5f5f5",
     borderRadius: 25,
     paddingVertical: 10,
     paddingHorizontal: 18,
     fontSize: 16,
-    color: "#fff",
+    color: "#222",
     maxHeight: 120,
+    marginHorizontal: 5,
   },
   iconButton: {
-    marginLeft: 8,
-    paddingBottom: 6,
-  },
-  icon: {
-    fontSize: 24,
-    color: "#25d366",
-  },
-  sendButton: {
-    borderRadius: 22,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginLeft: 8,
-    backgroundColor: "#6a0dad",
+    marginHorizontal: 6,
+    padding: 6,
     justifyContent: "center",
     alignItems: "center",
   },
-  sendIcon: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 28,
-    lineHeight: 28,
+  sendButton: {
+    backgroundColor: "#25D366",
+    borderRadius: 22,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginLeft: 6,
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalOverlay: {
     flex: 1,
